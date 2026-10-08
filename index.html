@@ -1,239 +1,112 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>JARVIS</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jarvis</title>
 <style>
-* {
-    box-sizing: border-box;
-}
-
-body {
-    margin: 0;
-    min-height: 100vh;
-    background: #05070a;
-    color: #00eaff;
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.container {
-    width: 90%;
-    max-width: 500px;
-    text-align: center;
-}
-
-h1 {
-    font-size: 42px;
-    letter-spacing: 8px;
-    margin-bottom: 10px;
-}
-
-.status {
-    color: #aaa;
-    margin-bottom: 30px;
-}
-
-#orb {
-    width: 180px;
-    height: 180px;
-    margin: auto;
-    border-radius: 50%;
-    border: 3px solid #00eaff;
-    box-shadow:
-        0 0 20px #00eaff,
-        0 0 60px #0077ff inset;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 50px;
-    transition: 0.3s;
-}
-
-#orb.active {
-    transform: scale(1.08);
-    box-shadow:
-        0 0 40px #00eaff,
-        0 0 100px #0077ff inset;
-}
-
-button {
-    margin-top: 35px;
-    padding: 15px 30px;
-    border-radius: 30px;
-    border: 2px solid #00eaff;
-    background: transparent;
-    color: #00eaff;
-    font-size: 18px;
-}
-
-#output {
-    margin-top: 25px;
-    min-height: 50px;
-    color: white;
-}
+  body{font-family:sans-serif;text-align:center;padding:30px;background:#111;color:#fff}
+  .icono{font-size:80px;margin:10px}
+  button{font-size:20px;padding:14px 24px;border-radius:12px;border:0;background:#1f883d;color:#fff}
 </style>
 </head>
-
 <body>
-
-<div class="container">
-
-<h1>JARVIS</h1>
-
-<div class="status" id="status">
-Sistema preparado
-</div>
-
-<div id="orb">
-◉
-</div>
-
-<button onclick="escuchar()">
-🎙️ HABLAR
-</button>
-
-<div id="output">
-Decime algo...
-</div>
-
-</div>
+<h1>Jarvis</h1>
+<span class="icono" id="luz">💡</span>
+<span class="icono" id="tele">📺</span>
+<p id="texto">Toca el botón y habla</p>
+<button onclick="iniciar()">🎤 Iniciar</button>
 
 <script>
+// Pega aquí tus enlaces (IFTTT, Home Assistant, etc.)
+const URL_LUZ_OFF  = "";
+const URL_TELE_OFF = "";
 
-const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
+const UMBRAL_APLAUSO = 0.5;   // baja a 0.35 si no detecta; sube a 0.7 si se activa solo
+const ESPERA_MS = 10000;      // tiempo para aplaudir después de la orden
 
-let recognition;
+let pendiente = null;         // "luz" o "tele"
+let timer = null;
+let ultimoAplauso = 0;
 
-if (SpeechRecognition) {
+const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+const rec = new R();
+rec.lang = "es-ES";
+rec.continuous = true;
 
-    recognition = new SpeechRecognition();
+function setTexto(t){ document.getElementById("texto").innerText = t; }
 
-    recognition.lang = "es-AR";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onstart = function() {
-        document.getElementById("status").innerText =
-            "Escuchando...";
-        document.getElementById("orb").classList.add("active");
-    };
-
-    recognition.onend = function() {
-        document.getElementById("orb").classList.remove("active");
-    };
-
-    recognition.onresult = function(event) {
-
-        const texto =
-            event.results[0][0].transcript.toLowerCase();
-
-        document.getElementById("output").innerText =
-            "Vos: " + texto;
-
-        responder(texto);
-    };
-
-    recognition.onerror = function() {
-
-        hablar("No pude escucharte correctamente.");
-    };
-
-} else {
-
-    document.getElementById("status").innerText =
-        "Tu navegador no permite reconocimiento de voz";
+function llamar(url){
+  if(url) fetch(url, {mode:"no-cors"}).catch(()=>{});
 }
 
-
-function escuchar() {
-
-    if (recognition) {
-        recognition.start();
-    }
+function responder(t){
+  const v = new SpeechSynthesisUtterance(t);
+  v.lang = "es-ES";
+  speechSynthesis.speak(v);
 }
 
-
-function hablar(texto) {
-
-    document.getElementById("output").innerText =
-        "JARVIS: " + texto;
-
-    const voz = new SpeechSynthesisUtterance(texto);
-
-    voz.lang = "es-AR";
-    voz.rate = 1;
-    voz.pitch = 1;
-
-    speechSynthesis.cancel();
-    speechSynthesis.speak(voz);
+function esperarAplauso(que){
+  pendiente = que;
+  clearTimeout(timer);
+  setTexto("Aplaude para apagar " + (que === "luz" ? "la luz del comedor" : "la tele") + " 👏");
+  timer = setTimeout(() => { pendiente = null; setTexto("Orden cancelada"); }, ESPERA_MS);
 }
 
-
-function responder(texto) {
-
-    if (texto.includes("hola")) {
-
-        hablar("Hola. Sistemas preparados.");
-
-    }
-
-    else if (texto.includes("hora")) {
-
-        const hora = new Date().toLocaleTimeString(
-            "es-AR",
-            {
-                hour: "2-digit",
-                minute: "2-digit"
-            }
-        );
-
-        hablar("Son las " + hora);
-
-    }
-
-    else if (texto.includes("fecha")) {
-
-        const fecha = new Date().toLocaleDateString(
-            "es-AR"
-        );
-
-        hablar("Hoy es " + fecha);
-
-    }
-
-    else if (texto.includes("cómo estás") ||
-             texto.includes("como estas")) {
-
-        hablar("Funcionando correctamente.");
-
-    }
-
-    else if (texto.includes("gracias")) {
-
-        hablar("A tu servicio.");
-
-    }
-
-    else {
-
-        hablar(
-            "Entendí: " + texto +
-            ". Todavía estoy aprendiendo."
-        );
-
-    }
+function ejecutar(){
+  if(pendiente === "luz"){
+    document.getElementById("luz").innerText = "🌑";
+    llamar(URL_LUZ_OFF);
+    responder("Luz del comedor apagada");
+  } else if(pendiente === "tele"){
+    document.getElementById("tele").innerText = "⬛";
+    llamar(URL_TELE_OFF);
+    responder("Tele apagada");
+  }
+  pendiente = null;
+  clearTimeout(timer);
+  setTexto("Listo");
 }
 
+rec.onresult = (e) => {
+  const f = e.results[e.results.length-1][0].transcript.toLowerCase().trim();
+  setTexto("Dijiste: " + f);
+  if(!f.includes("jarvis")) return;
+
+  if(f.includes("apaga la luz")) esperarAplauso("luz");
+  else if(f.includes("apaga la tele")) esperarAplauso("tele");
+};
+rec.onend = () => { try{ rec.start(); }catch(e){} };
+
+async function iniciar(){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const analizador = ctx.createAnalyser();
+    analizador.fftSize = 512;
+    ctx.createMediaStreamSource(stream).connect(analizador);
+    const datos = new Uint8Array(analizador.fftSize);
+
+    function revisar(){
+      analizador.getByteTimeDomainData(datos);
+      let pico = 0;
+      for(const v of datos) pico = Math.max(pico, Math.abs(v - 128) / 128);
+      const ahora = Date.now();
+      if(pico > UMBRAL_APLAUSO && ahora - ultimoAplauso > 800){
+        ultimoAplauso = ahora;
+        if(pendiente) ejecutar();
+      }
+      requestAnimationFrame(revisar);
+    }
+    revisar();
+  }catch(e){
+    setTexto("No pude usar el micrófono");
+    return;
+  }
+  try{ rec.start(); }catch(e){}
+  setTexto("Escuchando... di: Jarvis apaga la luz");
+}
 </script>
-
 </body>
 </html>
-
