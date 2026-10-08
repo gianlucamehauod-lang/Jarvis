@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>JARVIS</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #05070a;
+    color: #00eaff;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    letter-spacing: 8px;
+    margin-bottom: 10px;
+}
+
+.status {
+    color: #aaa;
+    margin-bottom: 30px;
+}
+
+#orb {
+    width: 180px;
+    height: 180px;
+    margin: auto;
+    border-radius: 50%;
+    border: 3px solid #00eaff;
+    box-shadow:
+        0 0 20px #00eaff,
+        0 0 60px #0077ff inset;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 50px;
+    transition: 0.3s;
+}
+
+#orb.active {
+    transform: scale(1.08);
+    box-shadow:
+        0 0 40px #00eaff,
+        0 0 100px #0077ff inset;
+}
+
+button {
+    margin-top: 35px;
+    padding: 15px 30px;
+    border-radius: 30px;
+    border: 2px solid #00eaff;
+    background: transparent;
+    color: #00eaff;
+    font-size: 18px;
+}
+
+#output {
+    margin-top: 25px;
+    min-height: 50px;
+    color: white;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>JARVIS</h1>
+
+<div class="status" id="status">
+Sistema preparado
+</div>
+
+<div id="orb">
+◉
+</div>
+
+<button onclick="escuchar()">
+🎙️ HABLAR
+</button>
+
+<div id="output">
+Decime algo...
+</div>
+
+</div>
+
+<script>
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+let recognition;
+
+if (SpeechRecognition) {
+
+    recognition = new SpeechRecognition();
+
+    recognition.lang = "es-AR";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = function() {
+        document.getElementById("status").innerText =
+            "Escuchando...";
+        document.getElementById("orb").classList.add("active");
+    };
+
+    recognition.onend = function() {
+        document.getElementById("orb").classList.remove("active");
+    };
+
+    recognition.onresult = function(event) {
+
+        const texto =
+            event.results[0][0].transcript.toLowerCase();
+
+        document.getElementById("output").innerText =
+            "Vos: " + texto;
+
+        responder(texto);
+    };
+
+    recognition.onerror = function() {
+
+        hablar("No pude escucharte correctamente.");
+    };
+
+} else {
+
+    document.getElementById("status").innerText =
+        "Tu navegador no permite reconocimiento de voz";
+}
+
+
+function escuchar() {
+
+    if (recognition) {
+        recognition.start();
+    }
+}
+
+
+function hablar(texto) {
+
+    document.getElementById("output").innerText =
+        "JARVIS: " + texto;
+
+    const voz = new SpeechSynthesisUtterance(texto);
+
+    voz.lang = "es-AR";
+    voz.rate = 1;
+    voz.pitch = 1;
+
+    speechSynthesis.cancel();
+    speechSynthesis.speak(voz);
+}
+
+
+function responder(texto) {
+
+    if (texto.includes("hola")) {
+
+        hablar("Hola. Sistemas preparados.");
+
+    }
+
+    else if (texto.includes("hora")) {
+
+        const hora = new Date().toLocaleTimeString(
+            "es-AR",
+            {
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+
+        hablar("Son las " + hora);
+
+    }
+
+    else if (texto.includes("fecha")) {
+
+        const fecha = new Date().toLocaleDateString(
+            "es-AR"
+        );
+
+        hablar("Hoy es " + fecha);
+
+    }
+
+    else if (texto.includes("cómo estás") ||
+             texto.includes("como estas")) {
+
+        hablar("Funcionando correctamente.");
+
+    }
+
+    else if (texto.includes("gracias")) {
+
+        hablar("A tu servicio.");
+
+    }
+
+    else {
+
+        hablar(
+            "Entendí: " + texto +
+            ". Todavía estoy aprendiendo."
+        );
+
+    }
+}
+
+</script>
+
+</body>
+</html>
+
